@@ -1,0 +1,25 @@
+@startuml
+|#gold|main|
+|#orange|lib-web|
+|#lightgreen|ServiceRegistry|
+
+|main|
+start
+
+|lib-web|
+:init ServiceRegistry;
+if (feature=dev-utils) then (yes)
+
+|ServiceRegistry|
+:read all SERVICE_RESOLVE_*;
+:init (name, host, port);
+:add to self;
+endif
+
+|lib-web|
+:done;
+
+|main|
+stop
+
+@enduml

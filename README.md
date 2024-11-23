@@ -1,7 +1,19 @@
+# A note about the fork
+
+This fork adds a few layers on top of Jeremey's original. I have tried to extensively document the changes so I can give back as much as I can. Hope someone finds it as useful as I found Jeremy's rust-web-app
+
+ - [Rust Web App Architecture documentation](./docs/00_base-rust-web-app/)
+ - [Rust Web App Refactoring lib_rpc and lib_web](./docs/01_refactor_lib_rpc_lib_web/README_Rust10x_RefactoringChanges.md) _which has been merged upstream into Jeremy's code base_
+ - [Rust Web App evolve into Worker Architecture](./docs/02_worker_architecture/0_README_WorkerArchitecture.md) _which describes changes to make so it supports a worker architecture. POC with a llm-worker which is based on `rust-genai`_
+
+Original README follows:
+
+---
+
 # Rust10x Web App Blueprint for Production Coding
 
-More info at: https://rust10x.com/web-app
-Discord: https://discord.gg/XuKWrNGKpC
+ - More info at: https://rust10x.com/web-app
+ - Discord: https://discord.gg/XuKWrNGKpC
 
 # Note last commit with `modql 0.4.0-rc.4`
 
@@ -78,23 +90,33 @@ ALTER DATABASE postgres SET log_statement = 'all';
 ## Dev (watch)
 
 > NOTE: Install cargo watch with `cargo install cargo-watch`.
+>
+> The `.cargo/dev-services.toml` contains resolution information for the various worker services involved. That is how the gateway knows how to hit the llm-worker service for instance.
+>
+> `web-gateway` is built with `features dev-utils` and this enables code which handles service name resolution via the supplied `dev-services.toml` file.
 
 ```sh
-# Terminal 1 - To run the server.
-cargo watch -q -c -w crates/services/web-server/src/ -w crates/libs/ -w .cargo/ -x "run -p web-server"
+# Terminal 1 - To run the gateway server.
+cargo watch -q -c -w crates/services/web-gateway/src/ -w crates/libs/ -w .cargo/ -x "run --config .cargo/dev-services.toml --features dev-utils -p web-gateway"
 
-# Terminal 2 - To run the quick_dev.
-cargo watch -q -c -w crates/services/web-server/examples/ -x "run -p web-server --example quick_dev"
+# Terminal 2 - To run the llm-worker server
+cargo watch -q -c -w crates/services/llm-worker/src/ -w crates/libs/ -w .cargo/ -x "run -p llm-worker"
+
+# Terminal 3 - To run the quick_dev.
+cargo watch -q -c -w crates/services/web-gateway/examples/ -x "run -p web-gateway --example quick_dev"
 ```
 
 ## Dev
 
 ```sh
-# Terminal 1 - To run the server.
-cargo run -p web-server
+# Terminal 1 - To run the gateway server.
+cargo run --config .cargo/dev-services.toml --features dev-utils -p web-gateway
 
-# Terminal 2 - To run the tests.
-cargo run -p web-server --example quick_dev
+# Terminal 2 - To run the llm-worker server
+cargo run -p llm-worker
+
+# Terminal 3 - To run the quick_dev.
+cargo run -p web-gateway --example quick_dev
 ```
 
 ## Unit Test (watch)

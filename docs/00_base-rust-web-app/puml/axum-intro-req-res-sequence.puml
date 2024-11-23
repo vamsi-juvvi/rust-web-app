@@ -1,0 +1,12 @@
+@startuml
+:request;
+:handler returns error;
+:error's //IntoResponse// called;
+:IntoResponse 
+  - creates placeholder response()
+  - inserts error into it's //.extensions//;
+:main_response_mapper
+ - gets error out of //response.extensions//
+ - creates a new json response with uuid+error if error
+ - otherwise sends non-error response through;  
+@enduml

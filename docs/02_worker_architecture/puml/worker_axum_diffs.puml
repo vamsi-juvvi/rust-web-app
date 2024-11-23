@@ -1,0 +1,50 @@
+@startmindmap
+* = LLM Worker
+** config
+***_ hardcode 8081 for now
+***_:
+finalize when k8s deployment occurs
+about what goes into config, what goes into 
+dns resolver mocks in dev-mode etc.;
+
+** ❌ ctx_resolver → **ctx_root_resolver**
+**[#yellow] **➕ctx_leaf_resolver **
+***:All workers will need a user context 
+to know who the logged in user was and get user
+specific data.
+
+Axum layers with //ctx_resolve// and //ctx_require// 
+work great: stick with that concept
+
+Can I get the ctx via json-rpc call instead of via
+HTTP Cookies or headers ?;
+
+***:new **ctx_leaf_resolver**
+hard to come up with good names
+made the front one **ctx_root_resolver**
+
+//auth//, //gateway//, //primary//, //webauth// etc 
+are all choices;
+****: **auth_resolver** injects //Ctx// 
+into JSON RPC calls
+Cookie is also an option;
+
+**** akin to API_TOKEN that API services give out
+
+***_ Start by faking it and putting in a random Ctx object in for now
+***_ Inject serialized //Ctx// in JSON RPC payloads from gateway
+****_ ❌ means body has to be parsed to read Ctx
+****_ ✔️ in header or cookies means just header needs parsing.
+
+***_ Read that serialized //Ctx// 
+
+** ✔️ ctx_require
+** ❌ fallback_service
+** ❌ routes_login
+** ✔️ CookieManager
+***_ Additional data from gateway
+***_ either inject into jRPC payload
+***_ ✔️ or into cookies.
+**[#yellow] ✔️ mw_req_stamp_resolver
+
+@endmindmap

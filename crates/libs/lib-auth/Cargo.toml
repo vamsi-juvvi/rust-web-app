@@ -22,7 +22,7 @@ sha2 = "0.10"
 # -- Hashing (pwd-scheme02)
 argon2 = {version="0.5", features=["std"]}
 # -- Others
-uuid = {version = "1", features = ["v4","fast-rng",]}
+uuid = { workspace = true }
 lazy-regex = "3"
 derive_more = { workspace = true }
 enum_dispatch = "0.3"

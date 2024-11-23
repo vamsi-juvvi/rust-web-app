@@ -1,0 +1,119 @@
+@startuml
+title   
+  |Color| Type |
+  |<#Gold>| Authenticated|
+  |<#Red>| Request path|
+  |<#Green>| Response path|
+end title
+
+component Browser {
+    json RPCRequest {
+            "content-type": "application/json",                        
+            "data" : {
+                "jsonrpc": "2.0",
+			    "id": 1,
+			    "method": "classify",
+			    "params": {
+					"image": "imageOfApple"
+			    }                
+            }
+        }
+}
+
+cloud "K8s" {    
+    
+    queue "Event Bus" {
+        portin "publish-request" #Gold
+        portin "publish-response" #Green
+        portout subscribe
+        
+        json Request {
+            "content-type": "application/json",
+            "ce-specversion": "1.0",
+            "ce-source": "http://curl-command",
+            "ce-type": "curl.demo",
+            "ce-id": "123-abc",
+            "data" : {
+                "classify": "imageOfApple"
+            }
+        }
+
+        json Response {
+            "content-type": "application/json",
+            "ce-specversion": "1.0",
+            "ce-source": "RPC1 Response ❓",
+            "ce-type": "❓",
+            "ce-id": "123-abc",
+            "data" : {                
+                "category" : "fruit",
+                "name" : "apple",
+                "is-safe": "yes"
+            }
+        }    
+    }
+
+    frame "RPC1 Set" {        
+        component "RPC1 Pod 1" {            
+            subscribe ----> [RPC1 Request Trigger] #Red
+            [RPC1 Request Trigger] -> [RPC1 Local Server] #Red
+            [RPC1 Local Server] -> "publish-response" #Green : rpc1 response event
+        }        
+    }        
+
+    component "API Gateway" #Gold {
+        port "HTTPS IO"
+
+        [Auth] --> [RPC Demux] #Red
+        [Auth] --> "HTTPS IO" #Green : **If not auth** \n redirect to login
+        [RPC Demux] --> [RPC Route /api/rpc1/*] #Red
+        [RPC Demux] --> [RPC Route /api/rpc../*] #Red
+        [RPC Demux] --> [RPC Route /api/rpcn/*] #Red
+
+        [RPC Route /api/rpc1/*] -->  "publish-request" #Red: Publish\n**rpc1 event** 
+        subscribe -> [RPC1 Response Trigger] #Green
+        [RPC1 Response Trigger] -up-> [RPC Route /api/rpc1/*] #Green
+
+
+        [RPC Route /api/rpc../*] --> "publish-request" #Red: Publish\n**rpc.. event**
+        subscribe -> [RPC.. Response Trigger] #Green
+        [RPC.. Response Trigger] -up-> [RPC Route /api/rpc../*] #Green
+
+        [RPC Route /api/rpcn/*] -->  "publish-request" #Red: Publish\n**rpcn event**
+        subscribe -> [RPCN Response Trigger] #Green
+        [RPCN Response Trigger] -up-> [RPC Route /api/rpcn/*] #Green
+        
+
+        [RPC Route /api/rpc1/*] -up-> [Response Mapper] #Green
+        [RPC Route /api/rpc../*] -up-> [Response Mapper] #Green
+        [RPC Route /api/rpcn/*] -up-> [Response Mapper] #Green
+
+        [Response Mapper] -up-> "HTTPS IO" #Green
+
+        note right of [RPC Demux]
+         Demuxing implicit
+         via Axum route **nesting**. 
+         
+         Axum route **handlers** 
+         are **event generators**
+        end note
+
+        note bottom of [RPC Route /api/rpc../*]
+         Send Event
+         ❓ send placeholder response
+         ⌚ Async wait for Response Trigger
+         ✔️ Send Response
+        end note
+    }    
+
+    database "DB" {
+        folder "Auth Tables" {
+        }        
+    }    
+}
+
+[Browser] --> "HTTPS IO" #Red
+"HTTPS IO" --> [Browser] #Green
+"HTTPS IO" --> [Auth] #Red
+[Auth] -> "Auth Tables"
+
+@enduml
