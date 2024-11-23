@@ -43,10 +43,19 @@ pub async fn log_request(
 		http_path: uri.to_string(),
 		http_method: http_method.to_string(),
 
+		user_id: ctx.as_ref().map(|c| c.user_id()),
+
 		rpc_id: rpc_info.and_then(|rpc| rpc.id.as_ref().map(|id| id.to_string())),
 		rpc_method: rpc_info.map(|rpc| rpc.method.to_string()),
-
-		user_id: ctx.map(|c| c.user_id()),
+		rpc_chain: ctx.and_then(
+			|c| c.req_chain().and_then(
+				|v| {
+					let xform = v.iter()
+					.map(|lnk| format!("{}@{}", lnk.uuid, lnk.service))
+					.collect();
+				Some(xform)
+				}
+		)),		
 
 		client_error_type: client_error.map(|e| e.as_ref().to_string()),
 
@@ -79,6 +88,7 @@ struct RequestLogLine {
 	// -- rpc info.
 	rpc_id: Option<String>,
 	rpc_method: Option<String>,
+	rpc_chain: Option<Vec<String>>,
 
 	// -- Errors attributes.
 	client_error_type: Option<String>,

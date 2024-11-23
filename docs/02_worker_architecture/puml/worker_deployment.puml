@@ -1,0 +1,55 @@
+```plantuml
+@startuml
+cloud Deployment {
+    package Ingress {
+        [web-gateway]
+        note top of [web-gateway]
+            PG_DEV_POSTGRES_URL
+            PG_DEV_APP_URL
+            SQL_RECREATE_DB_FILE_NAME
+            SQL_DIR
+            DEMO_PWD
+        end note
+        
+        [config.toml]
+        note left of [config.toml]
+            SERVICE_DB_URL
+            RUST_LOG
+        end note
+
+        [dev-services.toml]
+        note left of [dev-services.toml]
+            SERVICE_RESOLUTION_LLM = {
+                "name": "llm-worker", 
+                "host": "localhost", 
+                "port":8081
+            }
+        end note    
+    }
+
+    [config.toml]       -> [web-gateway]
+    [dev-services.toml] --> [web-gateway]
+
+    package "worker" {
+        [llm-worker]
+        [genAI]
+    }
+
+    [web-gateway] ---> "worker" #Orange: JsonRPC 
+
+    database postgres {    
+    }
+
+    note bottom of postgres
+        docker run --rm --name pg -p 5432:5432
+        -e POSTGRES_PASSWORD=welcome       
+        postgres:15
+    end note
+
+    [web-gateway] --> postgres #Orange
+}
+
+[Client] --> Ingress : JsonRPC/HTML
+
+@enduml
+```

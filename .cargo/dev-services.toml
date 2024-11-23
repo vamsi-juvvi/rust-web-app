@@ -1,0 +1,8 @@
+[env]
+
+# -- ConfigMap / Service DNS resolution
+# supply this additional file via `--config dev-services.toml` 
+# This is loaded when the bin is built with `--features dev-utils`
+
+SERVICE_RESOLUTION_LLM = '{"name": "llm-worker", "host": "localhost", "port":8081}'
+SERVICE_RESOLUTION_VISION = '{"name": "vision-worker", "host": "localhost", "port":8082}'

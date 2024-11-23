@@ -3,6 +3,9 @@ name = "lib-web"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+dev-utils = []
+
 [dependencies]
 # -- App Libs
 lib-utils = { path = "../../libs/lib-utils"}
@@ -12,24 +15,35 @@ lib-core = { path = "../../libs/lib-core"}
 
 # -- Async
 tokio = { version = "1", features = ["full"] }
+
 # -- Json
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_with = { workspace = true }
+
 # -- Web
 axum = {version = "0.7", features = ["macros"]}
 tower-http = { version = "0.5", features = ["fs"] }
 tower-cookies = "0.10"
+
 # -- Tracing
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true}
+
 # -- Rpc
 rpc-router = { workspace = true }
+
+# -- Web
+reqwest = {version = "0.12", features = ["json"]}
+#reqwest-eventsource = "0.6"
+#eventsource-stream = "0.2"
+
 # -- Others
 time = { workspace = true }
-uuid = {version = "1", features = ["v4","fast-rng",]}
+uuid = { workspace = true }
 strum_macros = "0.26"
 derive_more = { workspace = true }
+regex = { workspace = true }
 
 [lints]
 workspace = true

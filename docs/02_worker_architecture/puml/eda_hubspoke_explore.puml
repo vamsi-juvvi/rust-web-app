@@ -1,0 +1,65 @@
+@startmindmap
+* Polyglot
+** **EDA**\nEvent Driven Architecture
+*** Everything talks to the Event bus
+***: Direction communication is 
+replaced with subscribing and 
+publishing events;
+***:No DNS needed, only need 
+to resolve the event 
+bus service;
+***[#lightgreen] Ideal for production
+***[#lightpink]:sources timeout
+network failure
+replay events;
+****_ atleast once event generation
+****_ duplicate event generation
+****_ idempotency requirement in consumers
+***[#lightpink] **Idempotency**
+****_ idempotency keys
+*****_ UUID
+*****_ ID
+*****_ Timestamp
+*****_ Hash event payload
+****_ Separate store for idemptency keys and result
+****_ memoization ?
+
+** **Worker**
+*** Hub Spoke
+****: DNS for Hub to resolve
+workers and communicate
+along hub-worker edges;
+*** inter-connected
+****: DNS for every component
+to resolve every other component;
+***[#lightgreen]:Simplest for local 
+development;
+****_ DNS entries in config file
+****_ avoid EDA bus/brokers.
+
+***[#lightgreen]:Fairly straightforward
+evolution to EDA
+
+Instead of sending payload 
+to worker, encapsulate in 
+event packet and place on 
+event bus;
+
+** Communication
+***: Protocol implementation available
+for all languages involved;
+***_ REST
+***_ JsonRPC ✔️
+***_ gRPC
+***_ Thrift
+***: Since Rust10x already uses 
+JsonRPC, easiest to go with that
+
+ - Much better development and 
+   debuggability compared to gRPC
+ - Better for dev velocity
+ - Rust macros to spit out protobuf 
+   files is a possibility to evolve 
+   into gRPC;
+
+@endmindmap

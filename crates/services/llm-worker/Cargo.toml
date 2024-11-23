@@ -1,0 +1,55 @@
+[package]
+name = "llm-worker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# -- App Libs
+lib-utils = { path = "../../libs/lib-utils"}
+lib-rpc-app = { path = "../../libs/lib-rpc-app"}
+lib-rpc-core = { path = "../../libs/lib-rpc-core"}
+lib-auth = { path = "../../libs/lib-auth"}
+lib-core = { path = "../../libs/lib-core"}
+lib-web = { path = "../../libs/lib-web"}
+
+# -- Async
+tokio = { version = "1", features = ["full"] }
+
+# -- Json
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_with = { workspace = true }
+
+# -- Web
+axum = {version = "0.7", features = ["macros"]}
+tower-http = { version = "0.5", features = ["fs"] }
+tower-cookies = "0.10"
+
+# -- Tracing
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true}
+
+# -- Rpc
+rpc-router = { workspace = true }
+
+# -- Data
+sqlx = { workspace = true }
+sea-query = { workspace = true }
+sea-query-binder = { workspace = true }
+modql = { workspace = true }
+
+# -- AI
+genai = "=0.1.4"  #version lock for 0.1.x
+
+# -- Others
+time = { workspace = true }
+strum_macros = "0.26"
+derive_more = { workspace = true }
+
+[dev-dependencies]
+httpc-test = "0.1"
+
+# match whatever httpc-test is using. Otw, need httpc-test to 
+# export the RequestBuilder and other classes from it's version 
+# of reqwest.
+reqwest = {version = "0.11", features = ["cookies", "json"]} 

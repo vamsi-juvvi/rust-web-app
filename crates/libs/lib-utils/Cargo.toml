@@ -12,3 +12,5 @@ workspace = true
 [dependencies]
 base64 = "0.22"
 time = { workspace = true }
+regex = { workspace = true }
+derive_more = { workspace = true }

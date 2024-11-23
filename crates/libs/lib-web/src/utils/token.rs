@@ -14,8 +14,8 @@ pub(crate) fn set_token_cookie(cookies: &Cookies, user: &str, salt: Uuid) -> Res
 
 	let mut cookie = Cookie::new(AUTH_TOKEN, token.to_string());
 	cookie.set_http_only(true);
-	cookie.set_path("/");
-
+	cookie.set_path("/");	
+	
 	cookies.add(cookie);
 
 	Ok(())
@@ -23,8 +23,8 @@ pub(crate) fn set_token_cookie(cookies: &Cookies, user: &str, salt: Uuid) -> Res
 
 pub(crate) fn remove_token_cookie(cookies: &Cookies) -> Result<()> {
 	let mut cookie = Cookie::from(AUTH_TOKEN);
-	cookie.set_path("/");
 
+	cookie.set_path("/");
 	cookies.remove(cookie);
 
 	Ok(())

@@ -4,7 +4,7 @@ use axum::async_trait;
 use axum::body::Body;
 use axum::extract::{FromRequestParts, State};
 use axum::http::request::Parts;
-use axum::http::Request;
+use axum::http::{header, Request, HeaderMap};
 use axum::middleware::Next;
 use axum::response::Response;
 use lib_auth::token::{validate_web_token, Token};
@@ -15,6 +15,7 @@ use serde::Serialize;
 use tower_cookies::{Cookie, Cookies};
 use tracing::debug;
 
+// region:    ---  Ctx Requre and Resolve
 pub async fn mw_ctx_require(
 	ctx: Result<CtxW>,
 	req: Request<Body>,
@@ -32,15 +33,15 @@ pub async fn mw_ctx_require(
 //            This way it won't prevent downstream middleware to be executed, and will still capture the error
 //            for the appropriate middleware (.e.g., mw_ctx_require which forces successful auth) or handler
 //            to get the appropriate information.
-pub async fn mw_ctx_resolver(
+pub async fn mw_ctx_root_resolver(
 	State(mm): State<ModelManager>,
 	cookies: Cookies,
 	mut req: Request<Body>,
 	next: Next,
 ) -> Response {
-	debug!("{:<12} - mw_ctx_resolve", "MIDDLEWARE");
+	debug!("{:<12} - mw_ctx_root_resolver", "MIDDLEWARE");
 
-	let ctx_ext_result = ctx_resolve(mm, &cookies).await;
+	let ctx_ext_result = ctx_root_resolve(mm, &cookies).await;
 
 	if ctx_ext_result.is_err()
 		&& !matches!(ctx_ext_result, Err(CtxExtError::TokenNotInCookie))
@@ -55,7 +56,25 @@ pub async fn mw_ctx_resolver(
 	next.run(req).await
 }
 
-async fn ctx_resolve(mm: ModelManager, cookies: &Cookies) -> CtxExtResult {
+pub async fn mw_ctx_leaf_resolver(
+	mut req: Request<Body>,
+	next: Next,
+) -> Response {
+	debug!("{:<12} - mw_ctx_leaf_resolver", "MIDDLEWARE");
+
+	let ctx = ctx_from_req_header(&req.headers())		
+		.map_err(|ex| CtxExtError::CtxCreateFail(ex.to_string()));	
+
+	// store the ctx in request extension
+	// Note that this can be an Error. Will 
+	// be validated later
+	req.extensions_mut().insert(ctx);
+
+	next.run(req).await
+}
+// endregion:    ---  Ctx Requre and Resolve
+
+async fn ctx_root_resolve(mm: ModelManager, cookies: &Cookies) -> CtxExtResult {
 	// -- Get Token String
 	let token = cookies
 		.get(AUTH_TOKEN)
@@ -95,7 +114,7 @@ impl<S: Send + Sync> FromRequestParts<S> for CtxW {
 	type Rejection = Error;
 
 	async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self> {
-		debug!("{:<12} - Ctx", "EXTRACTOR");
+		debug!("{:<12} - CtxW", "EXTRACTOR");
 
 		parts
 			.extensions
@@ -106,6 +125,39 @@ impl<S: Send + Sync> FromRequestParts<S> for CtxW {
 	}
 }
 // endregion: --- Ctx Extractor
+
+// region:    --- Ctx to/from Auth1 header
+pub(crate) const AUTH1_HEADER_KEY: &str = "X-WORKER-POSTAUTH";
+
+pub fn set_auth1_header(ctx: &Ctx, headers: &mut HeaderMap) -> Result<()> {
+	let mut header_val = header::HeaderValue
+		::from_str(&serde_json::to_string(&ctx)?)
+		.unwrap();
+
+	header_val.set_sensitive(true);
+	headers.insert(AUTH1_HEADER_KEY, header_val);
+
+	Ok(())
+}
+
+pub fn get_ctx_headers(ctx: &Ctx) -> Result<(String,String)> {
+	Ok(
+		( AUTH1_HEADER_KEY.to_string(), serde_json::to_string(&ctx)?)	
+	)
+}
+
+pub fn ctx_from_req_header(headers: &HeaderMap) -> Result<CtxW> {
+	let pa_tok_val = headers
+		.get(AUTH1_HEADER_KEY)
+		.ok_or(Error::CtxExt(CtxExtError::CtxPostAuthTokenNotInReqHeader))?
+		.to_str()
+		.map_err(|_| Error::CtxExt(CtxExtError::CtxPostAuthTokenBadFormat))?;
+
+	let ctx:Ctx = serde_json::from_str(pa_tok_val)?;
+	Ok(CtxW(ctx))
+}
+// endregion: --- Ctx to/from Auth1 header
+
 
 // region:    --- Ctx Extractor Result/Error
 type CtxExtResult = core::result::Result<CtxW, CtxExtError>;
@@ -121,6 +173,8 @@ pub enum CtxExtError {
 	CannotSetTokenCookie,
 
 	CtxNotInRequestExt,
+	CtxPostAuthTokenNotInReqHeader,
+	CtxPostAuthTokenBadFormat,
 	CtxCreateFail(String),
 }
 // endregion: --- Ctx Extractor Result/Error

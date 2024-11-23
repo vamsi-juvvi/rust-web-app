@@ -1,0 +1,84 @@
+title   
+  |Color| Type |
+  |<#Yellow>| Authenticated|
+  |<#Orange>| RPC Chain|
+  |<#Green>| Non Authenticated|
+  
+end title
+
+[Browser]
+
+frame "Service 1" #Green {
+    [web worker 1] #LightGreen 
+}
+
+frame "Service 2" #Green {
+    [web worker 2] #LightGreen    
+}
+
+component "API Gateway" #Yellow {
+    portin "HTTP"    
+    component [RPC Demux] #orange
+    component [/api/rpc/**method**] as [rpc_local] #orange
+    component "/api/rpc/  **service  /  method**" as "rpc_remote" #orange {
+        component [service → URL\nservice/method → method] #gold
+    } 
+
+    component [axum_rpc_handler] #orange
+    component "Web Client" #orange {
+        component [URL \nCtx → HTTP Header\nJSON rpc2 → Body] #gold
+    }
+
+    [Auth] --> [RPC Demux]
+    [RPC Demux] --> [rpc_local]
+    [RPC Demux] --> [rpc_remote] 
+    
+    [rpc_local] --> [axum_rpc_handler]
+    [rpc_remote] --> [Web Client]
+    [rpc_remote]  ..> [Service Resolution Data]
+
+    [Web Client] -> "Service 1" : HTTP
+    [Web Client] --> "Service 2" : HTTP
+
+    note right of [RPC Demux]
+        method of form **service** / **method**
+        needs to be sent to **service**
+
+        otherwise
+
+        It is handled by the gateway
+    end note
+
+    note bottom of [Service Resolution Data]
+        .toml file with 
+
+        SERVICE_RESOLUTION_LLM = {
+        "name": "llm-worker", 
+        "host": "localhost", 
+        "port":8081}
+    end note
+}    
+
+database "DB" {
+    folder "Auth Tables" {
+        [User Table]
+        [Session Table]
+    }        
+}    
+
+
+[Browser] --> "HTTP"
+
+"HTTP" --> [Auth]
+
+[Auth] -up-> "Auth Tables"
+
+note bottom of [web worker 1]
+    To start these can simply be 
+    json-rpc web-services without
+    auth. 
+    
+    They instead take previously 
+    auth'd context over the 
+    HTTP request header
+end note

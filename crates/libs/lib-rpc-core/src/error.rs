@@ -5,7 +5,7 @@
 //!
 //! - When used in an rpc handler with the `rpc-router` crate,
 //!   this type will be encapsulated as a `rpc-router::Error::Handler(RpcHandlerError)` within a
-//!   "TypeMap" and can subsequently be retrieved (see `web-server::web::Error` for reference).
+//!   "TypeMap" and can subsequently be retrieved (see `web-gateway::web::Error` for reference).
 //!
 //! - For this application error to be utilized in the `rpc-router`, it must
 //!   implement the `IntoRpcHandlerError` trait. This trait has a suitable default implementation,

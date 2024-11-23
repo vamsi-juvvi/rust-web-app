@@ -1,0 +1,35 @@
+@startuml
+|client|
+|#gold|gateway|
+|#lightgreen|worker|
+
+|client|
+start
+: /api/rpc/{**worker_service**/**method**};
+note left
+ **service/method**
+ future split at LB
+ instead of payload 
+ marshall/unmarsall 
+ in gateway
+end note
+
+|gateway|
+:split on **/**;
+:lookup **worker_service**;
+:forward `/api/rpc/{**method**}`
+  - Add req UUID to Ctx CallChain
+  - serialize Ctx -> req.headers
+ req.POST;
+
+|worker|
+: get auth from req header;
+: handle `/api/rpc/**method**`;
+
+|gateway|
+:collect response Json;
+
+|client|
+stop
+
+@enduml
