@@ -5,10 +5,8 @@ mod error;
 pub use self::error::{Error, Result};
 
 use crate::config::auth_config;
-use hmac::{Hmac, Mac};
 use lib_utils::b64::{b64u_decode_to_string, b64u_encode};
 use lib_utils::time::{now_utc, now_utc_plus_sec_str, parse_utc};
-use sha2::Sha512;
 use std::fmt::Display;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -66,12 +64,12 @@ impl Display for Token {
 
 pub fn generate_web_token(user: &str, salt: Uuid) -> Result<Token> {
 	let config = &auth_config();
-	_generate_token(user, config.TOKEN_DURATION_SEC, salt, &config.TOKEN_KEY)
+	generate_token(user, config.TOKEN_DURATION_SEC, salt, &config.TOKEN_KEY)
 }
 
 pub fn validate_web_token(origin_token: &Token, salt: Uuid) -> Result<()> {
 	let config = &auth_config();
-	_validate_token_sign_and_exp(origin_token, salt, &config.TOKEN_KEY)?;
+	validate_token_sign_and_exp(origin_token, salt, &config.TOKEN_KEY)?;
 
 	Ok(())
 }
@@ -80,7 +78,7 @@ pub fn validate_web_token(origin_token: &Token, salt: Uuid) -> Result<()> {
 
 // region:    --- (private) Token Gen and Validation
 
-fn _generate_token(
+fn generate_token(
 	ident: &str,
 	duration_sec: f64,
 	salt: Uuid,
@@ -91,7 +89,7 @@ fn _generate_token(
 	let exp = now_utc_plus_sec_str(duration_sec);
 
 	// -- Sign the two first components.
-	let sign_b64u = _token_sign_into_b64u(&ident, &exp, salt, key)?;
+	let sign_b64u = token_sign_into_b64u(&ident, &exp, salt, key)?;
 
 	Ok(Token {
 		ident,
@@ -100,14 +98,14 @@ fn _generate_token(
 	})
 }
 
-fn _validate_token_sign_and_exp(
+fn validate_token_sign_and_exp(
 	origin_token: &Token,
 	salt: Uuid,
 	key: &[u8],
 ) -> Result<()> {
 	// -- Validate signature.
 	let new_sign_b64u =
-		_token_sign_into_b64u(&origin_token.ident, &origin_token.exp, salt, key)?;
+		token_sign_into_b64u(&origin_token.ident, &origin_token.exp, salt, key)?;
 
 	if new_sign_b64u != origin_token.sign_b64u {
 		return Err(Error::SignatureNotMatching);
@@ -126,7 +124,7 @@ fn _validate_token_sign_and_exp(
 
 /// Create token signature from token parts
 /// and salt.
-fn _token_sign_into_b64u(
+fn token_sign_into_b64u(
 	ident: &str,
 	exp: &str,
 	salt: Uuid,
@@ -134,17 +132,17 @@ fn _token_sign_into_b64u(
 ) -> Result<String> {
 	let content = format!("{}.{}", b64u_encode(ident), b64u_encode(exp));
 
-	// -- Create a HMAC-SHA-512 from key.
-	let mut hmac_sha512 = Hmac::<Sha512>::new_from_slice(key)
-		.map_err(|_| Error::HmacFailNewFromSlice)?;
+	// -- Create a Black3 Hasher (not from key because blake3 key is fixed length).
+	let mut hasher = blake3::Hasher::new();
 
 	// -- Add content.
-	hmac_sha512.update(content.as_bytes());
-	hmac_sha512.update(salt.as_bytes());
+	hasher.update(content.as_bytes());
+	hasher.update(salt.as_bytes());
+	hasher.update(key);
 
 	// -- Finalize and b64u encode.
-	let hmac_result = hmac_sha512.finalize();
-	let result_bytes = hmac_result.into_bytes();
+	let hmac_result = hasher.finalize();
+	let result_bytes = hmac_result.as_bytes();
 	let result = b64u_encode(result_bytes);
 
 	Ok(result)
@@ -201,15 +199,14 @@ mod tests {
 	}
 
 	#[test]
-	fn test_validate_web_token_ok() -> Result<()> {
+	fn test_token_validate_web_token_ok() -> Result<()> {
 		// -- Setup & Fixtures
 		let fx_user = "user_one";
 		let fx_salt =
 			Uuid::parse_str("f05e8961-d6ad-4086-9e78-a6de065e5453").unwrap();
 		let fx_duration_sec = 0.02; // 20ms
 		let token_key = &auth_config().TOKEN_KEY;
-		let fx_token =
-			_generate_token(fx_user, fx_duration_sec, fx_salt, token_key)?;
+		let fx_token = generate_token(fx_user, fx_duration_sec, fx_salt, token_key)?;
 
 		// -- Exec
 		thread::sleep(Duration::from_millis(10));
@@ -222,15 +219,14 @@ mod tests {
 	}
 
 	#[test]
-	fn test_validate_web_token_err_expired() -> Result<()> {
+	fn test_token_validate_web_token_err_expired() -> Result<()> {
 		// -- Setup & Fixtures
 		let fx_user = "user_one";
 		let fx_salt =
 			Uuid::parse_str("f05e8961-d6ad-4086-9e78-a6de065e5453").unwrap();
 		let fx_duration_sec = 0.01; // 10ms
 		let token_key = &auth_config().TOKEN_KEY;
-		let fx_token =
-			_generate_token(fx_user, fx_duration_sec, fx_salt, token_key)?;
+		let fx_token = generate_token(fx_user, fx_duration_sec, fx_salt, token_key)?;
 
 		// -- Exec
 		thread::sleep(Duration::from_millis(20));

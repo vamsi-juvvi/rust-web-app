@@ -1,6 +1,5 @@
 use crate::error::{Error, Result};
 use crate::utils::token::{set_token_cookie, AUTH_TOKEN};
-use axum::async_trait;
 use axum::body::Body;
 use axum::extract::{FromRequestParts, State};
 use axum::http::request::Parts;
@@ -109,7 +108,6 @@ async fn ctx_root_resolve(mm: ModelManager, cookies: &Cookies) -> CtxExtResult {
 #[derive(Debug, Clone)]
 pub struct CtxW(pub Ctx);
 
-#[async_trait]
 impl<S: Send + Sync> FromRequestParts<S> for CtxW {
 	type Rejection = Error;
 
